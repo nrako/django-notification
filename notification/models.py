@@ -321,7 +321,6 @@ def send_now(users, label, extra_context=None, on_site=True, sender=None):
         if should_send(user, notice_type, "1") and user.email and user.is_active: # Email
             recipients.append(user.email)
         
-        import pdb; pdb.set_trace()
         if messages['full.html']:
             from django.core.mail import EmailMultiAlternatives
             msg = EmailMultiAlternatives(subject, body, settings.DEFAULT_FROM_EMAIL, recipients)
