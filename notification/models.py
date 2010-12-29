@@ -320,7 +320,15 @@ def send_now(users, label, extra_context=None, on_site=True, sender=None):
             notice_type=notice_type, on_site=on_site, sender=sender)
         if should_send(user, notice_type, "1") and user.email and user.is_active: # Email
             recipients.append(user.email)
-        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, recipients)
+        
+        import pdb; pdb.set_trace()
+        if messages['full.html']:
+            from django.core.mail import EmailMultiAlternatives
+            msg = EmailMultiAlternatives(subject, body, settings.DEFAULT_FROM_EMAIL, recipients)
+            msg.attach_alternative(messages['full.html'], "text/html")
+            msg.send()
+        else:
+            send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, recipients)
 
     # reset environment to original language
     activate(current_language)
