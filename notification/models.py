@@ -324,6 +324,10 @@ def send_now(users, label, extra_context=None, on_site=True, sender=None):
         
         if messages['full.html']:
             from django.core.mail import EmailMultiAlternatives
+            # check if premailer is enabled
+            if getattr(settings, "NOTIFICATION_USE_PYNLINER", False):
+                import pynliner
+                messages['full.html'] = pynliner.fromString(messages['full.html'])
             msg = EmailMultiAlternatives(subject, body, settings.DEFAULT_FROM_EMAIL, recipients)
             msg.attach_alternative(messages['full.html'], "text/html")
             msg.send()
