@@ -245,7 +245,7 @@ def get_formatted_messages(formats, label, context):
     return format_templates
 
 def send_now(users, label, extra_context=None, on_site=True, sender=None,
-             from_email=settings.DEFAULT_FROM_EMAIL):
+             from_email=settings.DEFAULT_FROM_EMAIL, headers=None):
     """
     Creates a new notice.
 
@@ -329,11 +329,12 @@ def send_now(users, label, extra_context=None, on_site=True, sender=None,
             if getattr(settings, "NOTIFICATION_USE_PYNLINER", False):
                 import pynliner
                 messages['full.html'] = pynliner.fromString(messages['full.html'])
-            msg = EmailMultiAlternatives(subject, body, from_email, recipients)
+            msg = EmailMultiAlternatives(subject, body, from_email, recipients, headers)
             msg.attach_alternative(messages['full.html'], "text/html")
             msg.send()
         else:
-            send_mail(subject, body, from_email, recipients)
+            msg = EmailMessage(subject, body, from_email, recipients, headers)
+            msg.send()
 
     # reset environment to original language
     activate(current_language)
