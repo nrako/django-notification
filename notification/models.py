@@ -9,7 +9,6 @@ from django.db import models
 from django.db.models.query import QuerySet
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-from django.core.mail import send_mail
 from django.core.urlresolvers import reverse
 from django.template import Context
 from django.template.loader import render_to_string
@@ -344,6 +343,7 @@ def send_now(users, label, extra_context=None, on_site=True, sender=None,
             msg.attach_alternative(messages['full.html'], "text/html")
             msg.send()
         else:
+            from django.core.mail.message import EmailMessage
             msg = EmailMessage(subject, body, from_email, recipients, headers=headers)
             msg.send()
 
