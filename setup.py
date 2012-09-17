@@ -10,6 +10,9 @@ setup(
     author_email="jtauber@jtauber.com",
     url="https://github.com/jtauber/django-notification",
     packages=find_packages(),
+    install_requires=[
+        'celery>=2.5.3',
+    ],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Environment :: Web Environment",
