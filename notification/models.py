@@ -178,8 +178,9 @@ class Notice(models.Model):
         verbose_name = _("notice")
         verbose_name_plural = _("notices")
 
+    @models.permalink
     def get_absolute_url(self):
-        return reverse("notification_notice", args=[str(self.pk)])
+        return "notification_notice", [str(self.pk)]
 
 
 class NoticeQueueBatch(models.Model):
