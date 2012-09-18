@@ -1,5 +1,6 @@
 from django.conf.urls.defaults import patterns, url
 
+
 urlpatterns = patterns("notification.views",
     url(r"^$", "notice_list", name="notification_notices"),
     url(r"^settings/$", "notice_settings", name="notification_notice_settings"),
