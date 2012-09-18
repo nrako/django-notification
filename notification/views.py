@@ -6,11 +6,11 @@ from django.template import RequestContext
 from django.contrib.auth.decorators import login_required
 from django.contrib.syndication.views import Feed
 
-from .conf import settings
-from .models import Notice, NoticeType
-from .decorators import basic_auth_required, simple_basic_auth_callback
-from .feeds import NoticeUserFeed
-from .api import get_notification_setting
+from notification.conf import settings
+from notification.models import Notice, NoticeType
+from notification.decorators import basic_auth_required, simple_basic_auth_callback
+from notification.feeds import NoticeUserFeed
+from notification.api import get_notification_setting
 
 
 @basic_auth_required(realm="Notices Feed", callback_func=simple_basic_auth_callback)

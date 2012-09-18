@@ -12,7 +12,6 @@ from django.contrib.sites.models import Site
 from notification.models import Notice
 from notification.atomformat import Feed
 
-
 ITEMS_PER_FEED = getattr(settings, "ITEMS_PER_FEED", 20)
 DEFAULT_HTTP_PROTOCOL = getattr(settings, "DEFAULT_HTTP_PROTOCOL", "http")
 

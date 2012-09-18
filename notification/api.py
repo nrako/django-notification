@@ -7,9 +7,9 @@ from django.template.loader import render_to_string
 from django.core.urlresolvers import reverse
 from django.utils.translation import get_language, activate
 
-from .conf import settings
-from .models import Notice, NoticeType, NoticeSetting, ObservedItem
-from .utils import maybe_delay
+from notification.conf import settings
+from notification.models import Notice, NoticeType, NoticeSetting, ObservedItem
+from notification.utils import maybe_delay
 
 
 class NotificationContext(Context):

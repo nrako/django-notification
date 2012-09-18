@@ -1,4 +1,4 @@
-from .conf import settings
+from notification.conf import settings
 
 
 def can_queue(func, **kwargs):

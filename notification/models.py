@@ -12,8 +12,8 @@ try:
 except ImportError:
     now = datetime.datetime.now
 
-from .conf import settings
-from .utils import send
+from notification.conf import settings
+from notification.utils import send
 
 
 class NoticeType(models.Model):
