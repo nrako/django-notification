@@ -208,6 +208,7 @@ def send_now(users, label, extra_context=None, on_site=True, sender=None,
         subject = "".join(render_to_string("notification/email_subject.txt", {
                 "message": messages["short.txt"],
             }, context).splitlines())
+        subject = u'%s%s' % (settings.EMAIL_SUBJECT_PREFIX, subject)
 
         body = render_to_string("notification/email_body.txt", {
                 "message": messages["full.txt"],
