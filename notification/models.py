@@ -13,7 +13,6 @@ except ImportError:
     now = datetime.datetime.now
 
 from notification.conf import settings
-from notification.utils import send
 
 
 class NoticeType(models.Model):
@@ -181,6 +180,7 @@ class ObservedItem(models.Model):
         verbose_name_plural = _("observed items")
 
     def send_notice(self, extra_context=None):
+        from notification.api import send
         if extra_context is None:
             extra_context = {}
         extra_context.update({"observed": self.observed_object})
