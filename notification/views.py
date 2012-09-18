@@ -6,10 +6,11 @@ from django.template import RequestContext
 from django.contrib.auth.decorators import login_required
 from django.contrib.syndication.views import Feed
 
-from .models import Notice, NoticeType, NOTICE_MEDIA
+from .conf import settings
+from .models import Notice, NoticeType
 from .decorators import basic_auth_required, simple_basic_auth_callback
 from .feeds import NoticeUserFeed
-from .utils.notice import get_notification_setting
+from .api import get_notification_setting
 
 
 @basic_auth_required(realm="Notices Feed", callback_func=simple_basic_auth_callback)
@@ -67,7 +68,7 @@ def notice_settings(request):
     settings_table = []
     for notice_type in notice_types:
         settings_row = []
-        for medium_id, medium_display in NOTICE_MEDIA:
+        for medium_id, medium_display in settings.NOTIFICATION_MEDIA:
             form_label = "%s_%s" % (notice_type.label, medium_id)
             setting = get_notification_setting(request.user, notice_type, medium_id)
             if request.method == "POST":
@@ -87,7 +88,7 @@ def notice_settings(request):
         return HttpResponseRedirect(next_page)
 
     notice_settings = {
-        "column_headers": [medium_display for medium_id, medium_display in NOTICE_MEDIA],
+        "column_headers": [medium_display for medium_id, medium_display in settings.NOTIFICATION_MEDIA],
         "rows": settings_table,
     }
 

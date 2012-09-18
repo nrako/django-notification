@@ -1,6 +1,4 @@
-from django.conf import settings
-
-USE_QUEUE = getattr(settings, 'NOTIFICATION_USE_QUEUE', False)
+from .conf import settings
 
 
 def can_queue(func, **kwargs):
@@ -11,12 +9,12 @@ def can_queue(func, **kwargs):
     >>> can_queue(task_func)
     True
     """
-    use_queue = kwargs.pop('use_queue', USE_QUEUE)
+    use_queue = kwargs.pop('use_queue', settings.NOTIFICATION_USE_QUEUE)
     if not use_queue:
         return False
     elif use_queue is True:
         return True
-    elif '%s.%s' % (func.__module__, func.__name__) in USE_QUEUE:
+    elif '%s.%s' % (func.__module__, func.__name__) in settings.NOTIFICATION_USE_QUEUE:
         return True
     return False
 

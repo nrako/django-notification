@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.db import models
 from django.core.exceptions import ImproperlyConfigured
 from django.contrib.auth.models import AnonymousUser
@@ -8,13 +7,9 @@ from django.template.loader import render_to_string
 from django.core.urlresolvers import reverse
 from django.utils.translation import get_language, activate
 
+from .conf import settings
 from .models import Notice, NoticeType, NoticeSetting, ObservedItem
 from .utils import maybe_delay
-
-# how spam-sensitive is the medium
-NOTICE_MEDIA_DEFAULTS = {
-    "1": 2  # email
-}
 
 
 class NotificationContext(Context):
@@ -55,7 +50,7 @@ def get_notification_language(user):
     LanguageStoreNotAvailable if this site does not use translated
     notifications.
     """
-    if getattr(settings, "NOTIFICATION_LANGUAGE_MODULE", False):
+    if settings.NOTIFICATION_LANGUAGE_MODULE:
         try:
             app_label, model_name = settings.NOTIFICATION_LANGUAGE_MODULE.split(".")
             model = models.get_model(app_label, model_name)
@@ -75,7 +70,7 @@ def get_notification_setting(user, notice_type, medium):
             medium=medium
         )
     except NoticeSetting.DoesNotExist:
-        default = (NOTICE_MEDIA_DEFAULTS[medium] <= notice_type.default)
+        default = (settings.NOTIFICATION_MEDIA_DEFAULTS[medium] <= notice_type.default)
         setting = NoticeSetting(
             user=user,
             notice_type=notice_type,
@@ -213,7 +208,6 @@ def send_now(users, label, extra_context=None, on_site=True, sender=None,
         subject = "".join(render_to_string("notification/email_subject.txt", {
                 "message": messages["short.txt"],
             }, context).splitlines())
-        subject = u'%s%s' % (settings.EMAIL_SUBJECT_PREFIX, subject)
 
         body = render_to_string("notification/email_body.txt", {
                 "message": messages["full.txt"],
@@ -233,7 +227,7 @@ def send_now(users, label, extra_context=None, on_site=True, sender=None,
         if messages['full.html']:
             from django.core.mail import EmailMultiAlternatives
             # check if premailer is enabled
-            if getattr(settings, "NOTIFICATION_USE_PYNLINER", False):
+            if settings.NOTIFICATION_USE_PYNLINER:
                 import pynliner
                 messages['full.html'] = pynliner.fromString(messages['full.html'])
             msg = EmailMultiAlternatives(subject, body, from_email, recipients,

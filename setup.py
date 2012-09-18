@@ -12,6 +12,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'celery>=2.5.3',
+        'django-appconf >= 0.4',
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",

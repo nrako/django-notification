@@ -12,12 +12,8 @@ try:
 except ImportError:
     now = datetime.datetime.now
 
+from .conf import settings
 from .utils import send
-
-# if this gets updated, the create() method below needs to be as well...
-NOTICE_MEDIA = (
-    ("1", _("Email")),
-)
 
 
 class NoticeType(models.Model):
@@ -45,7 +41,8 @@ class NoticeSetting(models.Model):
 
     user = models.ForeignKey(User, verbose_name=_("user"))
     notice_type = models.ForeignKey(NoticeType, verbose_name=_("notice type"))
-    medium = models.CharField(_("medium"), max_length=1, choices=NOTICE_MEDIA)
+    medium = models.CharField(_("medium"), max_length=1,
+        choices=settings.NOTIFICATION_MEDIA)
     send = models.BooleanField(_("send"))
 
     class Meta:
