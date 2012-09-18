@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from notification.models import NoticeType, NoticeSetting, Notice, ObservedItem, NoticeQueueBatch
+from .models import NoticeType, NoticeSetting, Notice, ObservedItem
 
 
 class NoticeTypeAdmin(admin.ModelAdmin):
@@ -15,7 +15,6 @@ class NoticeAdmin(admin.ModelAdmin):
     list_display = ["message", "recipient", "sender", "notice_type", "added", "unseen", "archived"]
 
 
-admin.site.register(NoticeQueueBatch)
 admin.site.register(NoticeType, NoticeTypeAdmin)
 admin.site.register(NoticeSetting, NoticeSettingAdmin)
 admin.site.register(Notice, NoticeAdmin)
