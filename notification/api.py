@@ -145,8 +145,8 @@ def send(*args, **kwargs):
     be queued or not. A per call ``queue`` or ``now`` keyword argument can be
     used to always override the default global behavior.
     """
-    from notification.tasks import send_notice
-    maybe_delay(send_notice, *args, **kwargs)
+    from notification.tasks import notify
+    maybe_delay(notify, *args, **kwargs)
 
 
 def send_now(users, label, extra_context=None, on_site=True, sender=None,
@@ -164,25 +164,9 @@ def send_now(users, label, extra_context=None, on_site=True, sender=None,
     You can pass in on_site=False to prevent the notice emitted from being
     displayed on the site.
     """
-    if extra_context is None:
-        extra_context = {}
-
-    if from_email is None:
-        from_email = settings.DEFAULT_FROM_EMAIL
-
-    notice_type = NoticeType.objects.get(label=label)
-
     current_language = get_language()
 
-    formats = (
-        "short.txt",
-        "full.txt",
-        "notice.html",
-        "full.html",
-    )
-
     for user in users:
-        recipients = []
         # get user language for user from language store defined in
         # NOTIFICATION_LANGUAGE_MODULE setting
         try:
@@ -190,40 +174,84 @@ def send_now(users, label, extra_context=None, on_site=True, sender=None,
         except LanguageStoreNotAvailable:
             language = None
 
+        # activate the user's language
         if language is not None:
-            # activate the user's language
             activate(language)
 
-        # update context with user specific translations
-        context = NotificationContext({
-            "recipient": user,
-            "sender": sender,
-        })
-        context.update(extra_context)
+        notice = create_notice(user, label, extra_context, on_site, sender)
+        send_notice(notice, extra_context, from_email, headers)
 
-        # get prerendered format messages
-        messages = get_formatted_messages(formats, label, context)
+        # reset environment to original language
+        activate(current_language)
 
-        # Strip newlines from subject
-        subject = "".join(render_to_string("notification/email_subject.txt", {
-                "message": messages["short.txt"],
-            }, context).splitlines())
-        subject = u'%s%s' % (settings.EMAIL_SUBJECT_PREFIX, subject)
 
-        body = render_to_string("notification/email_body.txt", {
-                "message": messages["full.txt"],
-            }, context)
+def create_notice(user, label, extra_context=None, on_site=True, sender=None):
+    if extra_context is None:
+        extra_context = {}
 
-        notice = Notice.objects.create(
-            recipient=user,
-            message=messages["notice.html"],
-            notice_type=notice_type,
-            on_site=on_site,
-            sender=sender
-        )
+    notice_type = NoticeType.objects.get(label=label)
 
-        if can_send(user, notice_type, "1"):
-            recipients.append(user.email)
+    formats = (
+        "notice.html",
+    )
+
+    context = NotificationContext({
+        "recipient": user,
+        "sender": sender,
+    })
+    context.update(extra_context)
+
+    # get prerendered format messages
+    messages = get_formatted_messages(formats, label, context)
+
+    notice = Notice.objects.create(
+        recipient=user,
+        message=messages["notice.html"],
+        notice_type=notice_type,
+        on_site=on_site,
+        sender=sender
+    )
+
+    return notice
+
+
+def send_notice(notice, extra_context=None, from_email=None, headers=None):
+    if extra_context is None:
+        extra_context = {}
+
+    if from_email is None:
+        from_email = settings.DEFAULT_FROM_EMAIL
+
+    user = notice.recipient
+    notice_type = notice.notice_type
+
+    formats = (
+        "short.txt",
+        "full.txt",
+        "full.html",
+    )
+
+    context = NotificationContext({
+        "recipient": user,
+        "sender": notice.sender,
+    })
+    context.update(extra_context)
+
+    # get prerendered format messages
+    messages = get_formatted_messages(formats, notice_type.label, context)
+
+    # Strip newlines from subject
+    subject = "".join(render_to_string("notification/email_subject.txt", {
+            "message": messages["short.txt"],
+        }, context).splitlines())
+    subject = u'%s%s' % (settings.EMAIL_SUBJECT_PREFIX, subject)
+
+    body = render_to_string("notification/email_body.txt", {
+            "message": messages["full.txt"],
+        }, context)
+
+    if can_send(user, notice_type, "1"):
+        recipients = [user.email]
 
         if messages['full.html']:
             from django.core.mail import EmailMultiAlternatives
@@ -240,9 +268,6 @@ def send_now(users, label, extra_context=None, on_site=True, sender=None,
             msg = EmailMessage(subject, body, from_email, recipients,
                 headers=headers)
             msg.send()
-
-    # reset environment to original language
-    activate(current_language)
 
 
 def watch(observed, observer, notice_type_label, signal="post_save"):
