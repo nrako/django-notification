@@ -1,3 +1,5 @@
+from __future__ import with_statement
+
 from django.db import models
 from django.core.exceptions import ImproperlyConfigured
 from django.contrib.auth.models import AnonymousUser
@@ -60,6 +62,29 @@ def get_notification_language(user):
         except (ImportError, ImproperlyConfigured, model.DoesNotExist):
             raise LanguageStoreNotAvailable
     raise LanguageStoreNotAvailable
+
+
+class context_language(object):
+    def __init__(self, user):
+        self.user = user
+
+    def __enter__(self):
+        self.current_language = get_language()
+
+        # get user language for user from language store defined in
+        # NOTIFICATION_LANGUAGE_MODULE setting
+        try:
+            language = get_notification_language(self.user)
+        except LanguageStoreNotAvailable:
+            language = None
+
+        # activate the user's language
+        if language is not None:
+            activate(language)
+
+    def __exit__(self, type, value, traceback):
+        # reset environment to original language
+        activate(self.current_language)
 
 
 def get_notification_setting(user, notice_type, medium):
@@ -164,25 +189,10 @@ def send_now(users, label, extra_context=None, on_site=True, sender=None,
     You can pass in on_site=False to prevent the notice emitted from being
     displayed on the site.
     """
-    current_language = get_language()
-
     for user in users:
-        # get user language for user from language store defined in
-        # NOTIFICATION_LANGUAGE_MODULE setting
-        try:
-            language = get_notification_language(user)
-        except LanguageStoreNotAvailable:
-            language = None
-
-        # activate the user's language
-        if language is not None:
-            activate(language)
-
-        notice = create_notice(user, label, extra_context, on_site, sender)
-        send_notice(notice, extra_context, from_email, headers)
-
-        # reset environment to original language
-        activate(current_language)
+        with context_language(user):
+            notice = create_notice(user, label, extra_context, on_site, sender)
+            send_notice(notice, extra_context, from_email, headers)
 
 
 def create_notice(user, label, extra_context=None, on_site=True, sender=None):
