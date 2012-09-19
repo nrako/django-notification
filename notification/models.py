@@ -20,7 +20,7 @@ logger = logging.getLogger('notification')
 
 
 class NoticeTypeManager(models.Manager):
-    def create(self, label, display, description, default=2, verbosity=1):
+    def create_notice_type(self, label, display, description, default=2, verbosity=1):
         """
         Creates a new NoticeType.
 
