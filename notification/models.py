@@ -400,3 +400,76 @@ class ObservedItem(models.Model):
             extra_context = {}
         extra_context.update({"observed": self.observed_object})
         send([self.user], self.notice_type.label, extra_context)
+
+
+### DEPRECATED API #####################################################
+
+
+def create_notice_type(*args, **kwargs):
+    import warnings
+    warnings.warn("This function is deprecated. "
+                  "Please use NoticeType.objects.create_notice_type instead.",
+                  DeprecationWarning
+                  )
+    NoticeType.objects.create_notice_type(*args, **kwargs)
+
+
+def send(*args, **kwargs):
+    import warnings
+    warnings.warn("This function is deprecated. "
+                  "Please use notification.api.send instead.",
+                  DeprecationWarning
+                  )
+    from notification.api import send
+    send(*args, **kwargs)
+
+
+def send_now(*args, **kwargs):
+    import warnings
+    warnings.warn("This function is deprecated. "
+                  "Please use notification.api.send instead.",
+                  DeprecationWarning
+                  )
+    from notification.api import send
+    kwargs.update({'use_queue': False})
+    send(*args, **kwargs)
+
+
+def queue(*args, **kwargs):
+    import warnings
+    warnings.warn("This function is deprecated. "
+                  "Please use notification.api.send instead.",
+                  DeprecationWarning
+                  )
+
+    from notification.api import send
+    kwargs.update({'use_queue': True})
+    send(*args, **kwargs)
+
+
+def observe(*args, **kwargs):
+    import warnings
+    warnings.warn("This function is deprecated. "
+                  "Please use ObservedItem.objects.watch instead.",
+                  DeprecationWarning
+                  )
+
+    ObservedItem.objects.watch(*args, **kwargs)
+
+
+def stop_observing(*args, **kwargs):
+    import warnings
+    warnings.warn("This function is deprecated. "
+                  "Please use ObservedItem.objects.unwatch instead.",
+                  DeprecationWarning
+                  )
+    ObservedItem.objects.unwatch(*args, **kwargs)
+
+
+def is_observing(*args, **kwargs):
+    import warnings
+    warnings.warn("This function is deprecated. "
+                  "Please use ObservedItem.objects.is_watching instead.",
+                  DeprecationWarning
+                  )
+    ObservedItem.objects.is_watching(*args, **kwargs)
