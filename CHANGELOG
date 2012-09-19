@@ -1,22 +1,43 @@
-BI = backward incompatible change
+0.3.0
+-----
+
+  * Added support for HTML email
+  * Added CSS precompilation for HTML email
+  * Added Celery support for queuing
+  * Refactored the API
+  * Deprecated the old API
+
+Backward-incompatible changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  * Renamed NOTIFICATION_QUEUE_ALL to NOTIFICATION_USE_QUEUE
+  * Renamed NOTICE_MEDIA to NOTIFICATION_MEDIA
+  * Renamed NOTICE_MEDIA_DEFAULTS to NOTIFICATION_MEDIA_DEFAULTS
+  * Removed NoticeQueueBatch
+  * Removed emit_notices command
 
 0.2.0
 -----
 
- * BI: renamed Notice.user to Notice.recipient
- * BI: renamed {{ user }} context variable in notification templates to
-   {{ recipient }}
- * BI: added nullable Notice.sender and modified send_now and queue to take
-   an optional sender
- * added received and sent methods taking a User instance to Notice.objects
- * New default behavior: single notice view now marks unseen notices as seen
- * no longer optionally depend on mailer; use django.core.mail.send_mail and
-   we now encourge use of Django 1.2+ for mailer support
- * notifications are not sent to inactive users
- * users which do not exist when sending notification are now ignored
- * BI: split settings part of notices view to its own view notice_settings
+  * Added received and sent methods taking a User instance to Notice.objects
+  * New default behavior: single notice view now marks unseen notices as seen
+  * No longer optionally depend on mailer; use django.core.mail.send_mail and
+    we now encourge use of Django 1.2+ for mailer support
+  * Notifications are not sent to inactive users
+  * Users which do not exist when sending notification are now ignored
+
+Backward-incompatible changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  * Renamed Notice.user to Notice.recipient
+  * Renamed {{ user }} context variable in notification templates to
+    {{ recipient }}
+  * Added nullable Notice.sender and modified send_now and queue to take
+    an optional sender
+  * Split settings part of notices view to its own view notice_settings
+
 
 0.1.5
 -----
 
- * added support for DEFAULT_HTTP_PROTOCOL allowing https absolute URLs
+  * Added support for DEFAULT_HTTP_PROTOCOL allowing https absolute URLs

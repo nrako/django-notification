@@ -1,26 +1,37 @@
+===================
+django-notification
+===================
 
 Many sites need to notify users when certain events have occurred and to allow
 configurable options as to how those notifications are to be received.
 
-The project aims to provide a Django app for this sort of functionality. This
-includes:
+The project aims to provide a Django app for this sort of functionality.
+This includes:
 
- * submission of notification messages by other apps
- * notification messages on signing in
- * notification messages via email (configurable by user)
- * notification messages via feed
- 
- 
- This fork includes following improvements:
-===========
- 
- * HTML emails are sent if you include a full.html file in your folder
- * CSS is precompiled and rendered into the HTML elements (some email clients don't support external css)
- 
- 
- Follow Me
+    * Submission of notification messages by other apps.
+    * Notification messages on signing in.
+    * Notification messages via email (configurable by user).
+    * Notification messages via feed.
+
+This fork includes following improvements:
+
+    * HTML emails are sent if you include a full.html file in your folder
+
+    * CSS is precompiled and rendered into the HTML elements (some email
+      clients don't support external css)
+
+    * Celery support for queuing
+
+Installation
 ============
-http://github.com/philippWassibauer
-http://twitter.com/scalar
-http://philippw.tumblr.com
-https://bitbucket.org/philippwassibauer
+
+* Install django-notification with your favorite Python package manager::
+
+    pip install -e git://github.com/hyperweek/django-notification.git#egg=django_notification-dev
+
+* Add ``'notification'`` to your ``INSTALLED_APPS`` setting::
+
+    INSTALLED_APPS = [
+        # ...
+        'notification',
+    ]
