@@ -19,4 +19,4 @@ def notify(users, label, extra_context=None, on_site=True, sender=None,
         with context_language(user):
             notice = Notice.objects.create_notice(user, label, extra_context,
                                                   on_site, sender)
-            notice.send(notice, extra_context, from_email, headers)
+            notice.send(extra_context, from_email, headers)
