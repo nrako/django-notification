@@ -1,11 +1,12 @@
+import logging
 import datetime
 
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
-
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, AnonymousUser
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
+from django.template.loader import render_to_string
 
 try:
     from django.utils.timezone import now
@@ -13,6 +14,51 @@ except ImportError:
     now = datetime.datetime.now
 
 from notification.conf import settings
+from notification.utils import NotificationContext, get_formatted_messages
+
+logger = logging.getLogger('notification')
+
+
+class NoticeTypeManager(models.Manager):
+    def create(self, label, display, description, default=2, verbosity=1):
+        """
+        Creates a new NoticeType.
+
+        This is intended to be used by other apps as a post_syncdb manangement
+        step.
+        """
+        try:
+            notice_type = self.model.objects.get(label=label)
+            updated = False
+
+            if display != notice_type.display:
+                notice_type.display = display
+                updated = True
+
+            if description != notice_type.description:
+                notice_type.description = description
+                updated = True
+
+            if default != notice_type.default:
+                notice_type.default = default
+                updated = True
+
+            if updated:
+                notice_type.save()
+                if verbosity > 1:
+                    logger.info("Updated %s NoticeType" % label)
+
+        except self.model.DoesNotExist:
+            notice_type = self.model(
+                label=label,
+                display=display,
+                description=description,
+                default=default
+            )
+            notice_type.save()
+
+            if verbosity > 1:
+                logger.info("Created %s NoticeType" % label)
 
 
 class NoticeType(models.Model):
@@ -20,9 +66,10 @@ class NoticeType(models.Model):
     label = models.CharField(_("label"), max_length=40)
     display = models.CharField(_("display"), max_length=50)
     description = models.CharField(_("description"), max_length=100)
-
     # by default only on for media with sensitivity less than or equal to this number
     default = models.IntegerField(_("default"))
+
+    objects = NoticeTypeManager()
 
     def __unicode__(self):
         return self.label
@@ -30,6 +77,26 @@ class NoticeType(models.Model):
     class Meta:
         verbose_name = _("notice type")
         verbose_name_plural = _("notice types")
+
+
+class NoticeSettingManager(models.Manager):
+    def get_for(self, user, notice_type, medium):
+        try:
+            setting = self.model.objects.get(
+                user=user,
+                notice_type=notice_type,
+                medium=medium
+            )
+        except self.model.DoesNotExist:
+            default = (settings.NOTIFICATION_MEDIA_DEFAULTS[medium] <= notice_type.default)
+            setting = self.model(
+                user=user,
+                notice_type=notice_type,
+                medium=medium,
+                send=default
+            )
+            setting.save()
+        return setting
 
 
 class NoticeSetting(models.Model):
@@ -44,6 +111,8 @@ class NoticeSetting(models.Model):
         choices=settings.NOTIFICATION_MEDIA)
     send = models.BooleanField(_("send"))
 
+    objects = NoticeSettingManager()
+
     class Meta:
         verbose_name = _("notice setting")
         verbose_name_plural = _("notice settings")
@@ -52,7 +121,7 @@ class NoticeSetting(models.Model):
 
 class NoticeManager(models.Manager):
 
-    def notices_for(self, user, archived=False, unseen=None, on_site=None, sent=False):
+    def get_for(self, user, archived=False, unseen=None, on_site=None, sent=False):
         """
         returns Notice objects for the given user.
 
@@ -97,10 +166,43 @@ class NoticeManager(models.Manager):
         kwargs["sent"] = True
         return self.notices_for(sender, **kwargs)
 
+    def create_notice(self, user, label, extra_context=None, on_site=True,
+                      sender=None):
+        if extra_context is None:
+            extra_context = {}
+
+        notice_type = NoticeType.objects.get(label=label)
+
+        formats = (
+            "notice.html",
+        )
+
+        context = NotificationContext({
+            "recipient": user,
+            "sender": sender,
+        })
+        context.update(extra_context)
+
+        # get prerendered format messages
+        messages = get_formatted_messages(formats, label, context)
+
+        notice = self.model(
+            recipient=user,
+            message=messages["notice.html"],
+            notice_type=notice_type,
+            on_site=on_site,
+            sender=sender
+        )
+        notice.save()
+
+        return notice
+
 
 class Notice(models.Model):
-    recipient = models.ForeignKey(User, related_name="recieved_notices", verbose_name=_("recipient"))
-    sender = models.ForeignKey(User, null=True, related_name='sent_notices', verbose_name=_("sender"))
+    recipient = models.ForeignKey(User, related_name="recieved_notices",
+                                  verbose_name=_("recipient"))
+    sender = models.ForeignKey(User, null=True, related_name='sent_notices',
+                               verbose_name=_("sender"))
     message = models.TextField(_("message"))
     notice_type = models.ForeignKey(NoticeType, verbose_name=_("notice type"))
     added = models.DateTimeField(_("added"), default=now)
@@ -110,8 +212,17 @@ class Notice(models.Model):
 
     objects = NoticeManager()
 
+    class Meta:
+        ordering = ["-added"]
+        verbose_name = _("notice")
+        verbose_name_plural = _("notices")
+
     def __unicode__(self):
         return self.message
+
+    @models.permalink
+    def get_absolute_url(self):
+        return "notification_notice", [str(self.pk)]
 
     def archive(self):
         self.archived = True
@@ -130,14 +241,63 @@ class Notice(models.Model):
             self.save()
         return unseen
 
-    class Meta:
-        ordering = ["-added"]
-        verbose_name = _("notice")
-        verbose_name_plural = _("notices")
+    def can_send(self, medium):
+        from notification.api import can_send
+        return can_send(self.recipient, self.notice_type, medium)
 
-    @models.permalink
-    def get_absolute_url(self):
-        return "notification_notice", [str(self.pk)]
+    def send(self, extra_context=None, from_email=None, headers=None):
+        if extra_context is None:
+            extra_context = {}
+
+        if from_email is None:
+            from_email = settings.DEFAULT_FROM_EMAIL
+
+        user = self.recipient
+        notice_type = self.notice_type
+
+        formats = (
+            "short.txt",
+            "full.txt",
+            "full.html",
+        )
+
+        context = NotificationContext({
+            "recipient": user,
+            "sender": self.sender,
+        })
+        context.update(extra_context)
+
+        # get prerendered format messages
+        messages = get_formatted_messages(formats, notice_type.label, context)
+
+        # Strip newlines from subject
+        subject = "".join(render_to_string("notification/email_subject.txt", {
+                "message": messages["short.txt"],
+            }, context).splitlines())
+        subject = u'%s%s' % (settings.EMAIL_SUBJECT_PREFIX, subject)
+
+        body = render_to_string("notification/email_body.txt", {
+                "message": messages["full.txt"],
+            }, context)
+
+        if self.can_send(medium="1"):
+            recipients = [user.email]
+
+            if messages['full.html']:
+                from django.core.mail import EmailMultiAlternatives
+                # check if premailer is enabled
+                if settings.NOTIFICATION_USE_PYNLINER:
+                    import pynliner
+                    messages['full.html'] = pynliner.fromString(messages['full.html'])
+                msg = EmailMultiAlternatives(subject, body, from_email, recipients,
+                    headers=headers)
+                msg.attach_alternative(messages['full.html'], "text/html")
+                msg.send()
+            else:
+                from django.core.mail.message import EmailMessage
+                msg = EmailMessage(subject, body, from_email, recipients,
+                    headers=headers)
+                msg.send()
 
 
 class ObservedItemManager(models.Manager):
@@ -148,13 +308,68 @@ class ObservedItemManager(models.Manager):
         to be sent when a signal is emited.
         """
         content_type = ContentType.objects.get_for_model(observed)
-        observed_items = self.filter(content_type=content_type, object_id=observed.id, signal=signal)
+        observed_items = self.filter(
+            content_type=content_type,
+            object_id=observed.id,
+            signal=signal
+        )
         return observed_items
 
     def get_for(self, observed, observer, signal):
         content_type = ContentType.objects.get_for_model(observed)
-        observed_item = self.get(content_type=content_type, object_id=observed.id, user=observer, signal=signal)
+        observed_item = self.get(
+            content_type=content_type,
+            object_id=observed.id,
+            user=observer,
+            signal=signal
+        )
         return observed_item
+
+    def watch(self, observed, observer, label, signal="post_save"):
+        """
+        Create a new ObservedItem.
+
+        To be used by applications to register a user as an observer for
+        some object.
+        """
+        notice_type = NoticeType.objects.get(label=label)
+        observed_item = self.model(
+            user=observer,
+            observed_object=observed,
+            notice_type=notice_type,
+            signal=signal
+        )
+        observed_item.save()
+        return observed_item
+
+    def unwatch(self, observed, observer, signal="post_save"):
+        """
+        Remove an observed item.
+        """
+        observed_item = self.get_for(observed, observer, signal)
+        observed_item.delete()
+
+    def is_watching(self, observed, observer, signal="post_save"):
+        if isinstance(observer, AnonymousUser):
+            return False
+        try:
+            observed_item = self.get_for(observed, observer, signal)
+            return True
+        except self.model.DoesNotExist:
+            return False
+        except self.model.MultipleObjectsReturned:
+            return True
+
+    def notify(self, observed, signal="post_save", extra_context=None):
+        """
+        Send a notice for each registered user about an observed object.
+        """
+        if extra_context is None:
+            extra_context = {}
+        observed_items = self.all_for(observed, signal)
+        for observed_item in observed_items:
+            observed_item.send(extra_context)
+        return observed_items
 
 
 class ObservedItem(models.Model):
@@ -179,7 +394,7 @@ class ObservedItem(models.Model):
         verbose_name = _("observed item")
         verbose_name_plural = _("observed items")
 
-    def send_notice(self, extra_context=None):
+    def send(self, extra_context=None):
         from notification.api import send
         if extra_context is None:
             extra_context = {}

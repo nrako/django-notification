@@ -7,10 +7,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.syndication.views import Feed
 
 from notification.conf import settings
-from notification.models import Notice, NoticeType
+from notification.models import Notice, NoticeType, NoticeSetting
 from notification.decorators import basic_auth_required, simple_basic_auth_callback
 from notification.feeds import NoticeUserFeed
-from notification.api import get_notification_setting
 
 
 @basic_auth_required(realm="Notices Feed", callback_func=simple_basic_auth_callback)
@@ -70,7 +69,7 @@ def notice_settings(request):
         settings_row = []
         for medium_id, medium_display in settings.NOTIFICATION_MEDIA:
             form_label = "%s_%s" % (notice_type.label, medium_id)
-            setting = get_notification_setting(request.user, notice_type, medium_id)
+            setting = NoticeSetting.objects.get_for(request.user, notice_type, medium_id)
             if request.method == "POST":
                 if request.POST.get(form_label) == "on":
                     if not setting.send:

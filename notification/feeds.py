@@ -77,4 +77,4 @@ class NoticeUserFeed(BaseNoticeFeed):
         return ({"href": complete_url},)
 
     def items(self, user):
-        return Notice.objects.notices_for(user).order_by("-added")[:ITEMS_PER_FEED]
+        return Notice.objects.get_for(user).order_by("-added")[:ITEMS_PER_FEED]
