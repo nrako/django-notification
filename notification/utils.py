@@ -111,7 +111,7 @@ class NotificationContext(Context):
             'site_url': site_url,
             'notices_url': notices_url,
             'notices_settings_url': notices_settings_url,
-            "STATIC_URL": settings.STATIC_URL,
+            'STATIC_URL': settings.STATIC_URL,
         })
 
 
