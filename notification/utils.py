@@ -94,6 +94,10 @@ class NotificationContext(Context):
         protocol = getattr(settings, 'DEFAULT_HTTP_PROTOCOL', 'http')
         current_site = Site.objects.get_current()
         site_url = u"%s://%s" % (protocol, unicode(current_site.domain))
+        media_url = settings.MEDIA_URL
+
+        if not media_url.startswith('http'):
+            media_url = u'%s%s' % (site_url, media_url)
 
         notices_url = u"%s%s" % (
             site_url,
@@ -112,6 +116,7 @@ class NotificationContext(Context):
             'notices_url': notices_url,
             'notices_settings_url': notices_settings_url,
             'STATIC_URL': settings.STATIC_URL,
+            'MEDIA_URL': media_url,
         })
 
 
