@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.sites.models import Site
 from django.template import Context
 from django.template.loader import render_to_string
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import reverse, set_script_prefix
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import get_language, activate
 
@@ -95,23 +95,18 @@ class NotificationContext(Context):
         current_site = Site.objects.get_current()
         site_url = u"%s://%s" % (protocol, unicode(current_site.domain))
 
-        notices_url = u"%s%s" % (
-            site_url,
-            reverse('notification_notices'),
-        )
+        if not settings.MEDIA_URL.startswith('http'):
+            settings.MEDIA_URL = u'%s%s' % (site_url, settings.MEDIA_URL)
 
-        notices_settings_url = u"%s%s" % (
-            site_url,
-            reverse('notification_notice_settings'),
-        )
+        set_script_prefix(site_url)
 
         self.update({
             'current_site': current_site,  # backward-compatibility
             'site': current_site,
             'site_url': site_url,
-            'notices_url': notices_url,
-            'notices_settings_url': notices_settings_url,
-            "STATIC_URL": settings.STATIC_URL,
+            'notices_url': reverse('notification_notices'),
+            'notices_settings_url': reverse('notification_notice_settings'),
+            'STATIC_URL': settings.STATIC_URL,
         })
 
 
