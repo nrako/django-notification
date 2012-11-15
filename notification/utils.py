@@ -98,24 +98,14 @@ class NotificationContext(Context):
         if not settings.MEDIA_URL.startswith('http'):
             settings.MEDIA_URL = u'%s%s' % (site_url, settings.MEDIA_URL)
 
-        notices_url = u"%s%s" % (
-            site_url,
-            reverse('notification_notices'),
-        )
-
-        notices_settings_url = u"%s%s" % (
-            site_url,
-            reverse('notification_notice_settings'),
-        )
-
-        set_script_prefix(current_site.domain)
+        set_script_prefix(site_url)
 
         self.update({
             'current_site': current_site,  # backward-compatibility
             'site': current_site,
             'site_url': site_url,
-            'notices_url': notices_url,
-            'notices_settings_url': notices_settings_url,
+            'notices_url': reverse('notification_notices'),
+            'notices_settings_url': reverse('notification_notice_settings'),
             'STATIC_URL': settings.STATIC_URL,
             'MEDIA_URL': settings.MEDIA_URL,
         })
