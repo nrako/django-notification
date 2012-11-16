@@ -107,7 +107,6 @@ class NotificationContext(Context):
             'notices_url': reverse('notification_notices'),
             'notices_settings_url': reverse('notification_notice_settings'),
             'STATIC_URL': settings.STATIC_URL,
-            'MEDIA_URL': settings.MEDIA_URL,
         })
 
 
