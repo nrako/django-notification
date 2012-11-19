@@ -1,6 +1,9 @@
 0.3.1
 -----
-  * Modified NotificationContext to use set_script_prefix and add MEDIA_URL
+  * Modified NotificationContext to use set_script_prefix and prefix MEDIA_URL and STATIC_URL
+    we encourage use of {% url "relative-url" %} and {% static "relative-url" %} template tags
+  * Removed STATIC_URL from context use now {% static "relative-url" %}
+  * MEDIA_URL is prefixed for template tags which may rely on it e.g solr-thumbnail
 
 0.3.0
 -----

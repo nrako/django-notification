@@ -95,9 +95,16 @@ class NotificationContext(Context):
         current_site = Site.objects.get_current()
         site_url = u"%s://%s" % (protocol, unicode(current_site.domain))
 
+        # prefix MEDIA_URL and STATIC_URL with absolute site url
+        # e.g MEDIA_URL may be used trough solr-thumnail {% thumbnail image as thumb %} {{thumb.url}}
         if not settings.MEDIA_URL.startswith('http'):
             settings.MEDIA_URL = u'%s%s' % (site_url, settings.MEDIA_URL)
 
+        # e.g STATIC_URL trough {% static "relative-url"}
+        if not settings.STATIC_URL.startswith('http'):
+            settings.STATIC_URL = u'%s%s' % (site_url, settings.STATIC_URL)
+
+        # prefix reversed url https://github.com/django/django/blob/master/django/core/urlresolvers.py#L450
         set_script_prefix(site_url)
 
         self.update({
@@ -106,7 +113,6 @@ class NotificationContext(Context):
             'site_url': site_url,
             'notices_url': reverse('notification_notices'),
             'notices_settings_url': reverse('notification_notice_settings'),
-            'STATIC_URL': settings.STATIC_URL,
         })
 
 
