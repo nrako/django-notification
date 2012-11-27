@@ -66,6 +66,35 @@ class context_language(object):
         activate(self.current_language)
 
 
+class AbsoluteUrlContext():
+    def __init__(self):
+        self.prev_media_url = settings.MEDIA_URL
+        self.prev_static_url = settings.STATIC_URL
+        self.prev_script_prefix = get_script_prefix()
+
+    def __enter__(self):
+        protocol = getattr(settings, 'DEFAULT_HTTP_PROTOCOL', 'http')
+        current_site = Site.objects.get_current()
+        site_url = u"%s://%s" % (protocol, unicode(current_site.domain))
+        # prefix MEDIA_URL and STATIC_URL with absolute site url
+        # e.g MEDIA_URL may be used trough solr-thumnail {% thumbnail image as thumb %} {{thumb.url}}
+        if not self.prev_media_url.startswith('http'):
+            settings.MEDIA_URL = u'%s%s' % (site_url, settings.MEDIA_URL)
+
+        # e.g STATIC_URL trough {% static "relative-url"}
+        if not self.prev_static_url.startswith('http'):
+            settings.STATIC_URL = u'%s%s' % (site_url, settings.STATIC_URL)
+
+        # prefix reversed url https://github.com/django/django/blob/master/django/core/urlresolvers.py#L450
+        if not self.prev_script_prefix.startswith('http'):
+            set_script_prefix(site_url)
+
+    def __exit__(self, type, value, traceback):
+        settings.MEDIA_URL = self.prev_media_url
+        settings.STATIC_URL = self.prev_static_url
+        set_script_prefix(self.prev_script_prefix)
+
+
 class LanguageStoreNotAvailable(Exception):
     pass
 
@@ -113,42 +142,21 @@ def get_formatted_messages(formats, label, context):
     Returns a dictionary with the format identifier as the key. The values are
     are fully rendered templates with the given context.
     """
-    protocol = getattr(settings, 'DEFAULT_HTTP_PROTOCOL', 'http')
-    current_site = Site.objects.get_current()
-    site_url = u"%s://%s" % (protocol, unicode(current_site.domain))
-    # prefix MEDIA_URL and STATIC_URL with absolute site url
-    # e.g MEDIA_URL may be used trough solr-thumnail {% thumbnail image as thumb %} {{thumb.url}}
-    previous_media_url = settings.MEDIA_URL
-    if not previous_media_url.startswith('http'):
-        settings.MEDIA_URL = u'%s%s' % (site_url, settings.MEDIA_URL)
-
-    # e.g STATIC_URL trough {% static "relative-url"}
-    previous_static_url = settings.STATIC_URL
-    if not previous_static_url.startswith('http'):
-        settings.STATIC_URL = u'%s%s' % (site_url, settings.STATIC_URL)
-
-    # prefix reversed url https://github.com/django/django/blob/master/django/core/urlresolvers.py#L450
-    previous_script_prefix = get_script_prefix()
-    if not previous_script_prefix.startswith('http'):
-        set_script_prefix(site_url)
 
     format_templates = {}
-    for format in formats:
-        # conditionally turn off autoescaping for .txt extensions in format
-        if format.endswith(".txt"):
-            context.autoescape = False
-        else:
-            context.autoescape = True
-        try:
-            format_templates[format] = render_to_string((
-                    "notification/%s/%s" % (label, format),
-                    "notification/%s" % format),
-                context_instance=context)
-        except template.TemplateDoesNotExist, e:
-            logger.error(e, exc_info=True)
-
-    settings.MEDIA_URL = previous_media_url
-    settings.STATIC_URL = previous_static_url
-    set_script_prefix(previous_script_prefix)
+    with AbsoluteUrlContext():
+        for format in formats:
+            # conditionally turn off autoescaping for .txt extensions in format
+            if format.endswith(".txt"):
+                context.autoescape = False
+            else:
+                context.autoescape = True
+            try:
+                format_templates[format] = render_to_string((
+                        "notification/%s/%s" % (label, format),
+                        "notification/%s" % format),
+                    context_instance=context)
+            except template.TemplateDoesNotExist, e:
+                logger.error(e, exc_info=True)
 
     return format_templates
